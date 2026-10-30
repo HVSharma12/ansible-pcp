@@ -89,17 +89,17 @@
     - "'pcp-pmda-openmetrics' in __spark_packages_pcp"
   block:
     - name: Extract metric collection configuration file content
-      command: "cat {{ __spark_pmcd_conf }}"
+      slurp:
+        src: "{{ __spark_pmcd_conf }}"
       register: __spark_pmcd_conf_content
-      changed_when: false
-      check_mode: false
 
     - name: Ensure PCP OpenMetrics agent is marked for installation
       file:
-        path: "{{ __spark_agent_path }}/.NeedInstall"
+        path: "{{ __spark_metrics_symlink | dirname | dirname }}/.NeedInstall"
         mode: u=rw,g=r,o=r
         state: touch
-      when: __spark_pmcd_conf_content.stdout.find('openmetrics') == -1
+      when: __spark_pmcd_conf_content.content | b64decode is
+        not search('^openmetrics\\s', multiline=True)
       register: __spark_register_changed_agent
 
     - name: Ensure performance metric collector is restarted for the agent
